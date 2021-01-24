@@ -12,3 +12,7 @@ How to install and use:
     $vj = new visualijoper($yourValue, $name);
     
     echo $vj->render();
+
+
+
+TODO: The class now requires jQuery. The task is to make a version in pure js.
