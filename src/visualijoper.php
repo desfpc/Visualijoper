@@ -1,10 +1,12 @@
 <?php
 /**
- * visualijoper v1.0.1
+ * visualijoper v1.0.2
  * Created by Sergey Peshalov https://github.com/desfpc
  * PHP class for rendering variables and objects. Used when debugging code.
  * https://github.com/desfpc/Visualijoper
  */
+
+namespace visualijoper;
 
 class visualijoper
 {
