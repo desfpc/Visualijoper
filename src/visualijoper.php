@@ -1,6 +1,6 @@
 <?php
 /**
- * visualijoper v1.0.2
+ * visualijoper v1.0.3
  * Created by Sergey Peshalov https://github.com/desfpc
  * PHP class for rendering variables and objects. Used when debugging code.
  * https://github.com/desfpc/Visualijoper
@@ -238,14 +238,14 @@ class visualijoper
         return $value;
     }
 
-}
+    /**
+     * Alias for convenient use of a class as a function
+     * @param $var - some type variable
+     * @param string $name - name of visualijoper block
+     */
+    static public function visualijop($var, $name = ''){
+        $vj = new visualijoper($var, $name);
+        echo $vj->render();
+    }
 
-/**
- * Alias for convenient use of a class as a function
- * @param $var - some type variable
- */
-function visualijop($var, $name = false)
-{
-    $vj = new visualijoper($var, $name);
-    echo $vj->render();
 }
