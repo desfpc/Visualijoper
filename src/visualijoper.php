@@ -103,7 +103,7 @@ class visualijoper
             $moreClass = '';
         }
         $out = '<div class="visualijoper"><div class="visualijoper__header vj-header ' . $moreClass . '">';
-        if ($this->name) {
+        if ($this->name && $this->name != '') {
             $out .= '<p class="vj-header__name">' . $this->name . ':</p>';
         }
         $out .= '<span class="vj-header__type">' . $this->type . '</span>';
