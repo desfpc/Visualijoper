@@ -90,6 +90,10 @@
     display: none;
 }
 
+.vj-body.active > .vj-body__content {
+    display: block;
+}
+
 .vj-body__content_string {
     padding: 5px;
     overflow-x: scroll;

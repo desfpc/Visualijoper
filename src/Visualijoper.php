@@ -1,18 +1,28 @@
 <?php
 /**
- * visualijoper v1.0.3
+ * Visualijoper v2.0
  * Created by Sergey Peshalov https://github.com/desfpc
  * PHP class for rendering variables and objects. Used when debugging code.
  * https://github.com/desfpc/Visualijoper
  */
 
-namespace visualijoper;
+namespace desfpc\Visualijoper;
 
-class visualijoper
+class Visualijoper
 {
-    public $name = false;//заголовок (не обязательно) для понимания, что вообще выводится
-    public $var;//переданная для визуализации
-    public $type;//тип переменной var
+    /** @var bool|string Title for Visualijoper block */
+    public $name = false;
+
+    /** @var mixed Passed for visualization variable */
+    public $var;
+
+    /** @var string Passed variable type  */
+    public $type;
+
+    /** @var bool print scripts (CSS/JS) flag */
+    public $printScripts;
+
+    /** @var array<string, array{body: bool}> Possible types of the passed variable */
     private $types = [
         'Null' => [
             'body' => false
@@ -40,18 +50,35 @@ class visualijoper
         ]
     ];
 
+    /** @var bool CSS/JS Scripts printed flag */
+    private static $_ifScriptsPrinted = false;
 
-    public function __construct($var, $name = false)
+    /**
+     * Visualijoper constructor
+     *
+     * @param mixed $var
+     * @param bool|string $name
+     * @param bool $printScripts
+     */
+    public function __construct($var, $name = false, bool $printScripts = true)
     {
         $this->var = $var;
         if ($name && $name != '') {
             $this->name = $name;
         }
-        $this->type = $this->checkType($this->var);
+        $this->type = $this->_checkType($this->var);
+        $this->printScripts = $printScripts;
     }
 
-    //Определяем тип переменной. Поддерживаются сейчас переменные Null, String, Float, Integer, Array, Object, Boolean
-    public function checkType($var)
+    /**
+     * Check type of passed variable
+     * Supported types: Null, String, Float, Integer, Array, Object, Boolean
+     * For a variable of other types, returning Unknown type
+     *
+     * @param mixed $var
+     * @return string
+     */
+    private function _checkType($var): string
     {
         if (is_null($var)) {
             return 'Null';
@@ -70,49 +97,68 @@ class visualijoper
         }
         if (is_object($var)) {
             return 'Object';
-        } elseif (is_bool($var)) {
+        }
+        if (is_bool($var)) {
             return 'Boolean';
         }
         return 'Unknown';
     }
 
-    public function render()
+    /**
+     * Render Visualijoper block
+     *
+     * @return string
+     */
+    public function render(): string
     {
+        $out = '';
 
-        //формирование заголовка
-        $out = $this->makeHeader($this->var);
-
-        //если нужно, формироуем детализацию
-        if ($this->types[$this->type]['body']) {
-            $out .= $this->makeBody($this->type, $this->var);
+        if ($this->printScripts && !self::$_ifScriptsPrinted) {
+            self::$_ifScriptsPrinted = true;
+            $out .= '<style>' . file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'visualijoper.css') . '</style>';
+            $out .= '<script>' . file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'visualijoper.js') . '</script>';
         }
 
-        //формирование подвала
-        $out .= $this->makeFooter();
+        $out .= $this->_makeHeader();
+
+        if ($this->types[$this->type]['body']) {
+            $out .= $this->_makeBody($this->type, $this->var);
+        }
+
+        $out .= $this->_makeFooter();
 
         return $out;
-
     }
 
-    private function makeHeader()
+    /**
+     * Make Visualijoper block header html string
+     *
+     * @return string
+     */
+    private function _makeHeader(): string
     {
-        //если предпологается тело, делаем заголовок кликабельным
         if ($this->types[$this->type]['body']) {
             $moreClass = 'vj-header_clickable';
         } else {
             $moreClass = '';
         }
+
         $out = '<div class="visualijoper"><div class="visualijoper__header vj-header ' . $moreClass . '">';
         if ($this->name && $this->name != '') {
             $out .= '<p class="vj-header__name">' . $this->name . ':</p>';
         }
         $out .= '<span class="vj-header__type">' . $this->type . '</span>';
-        $out .= ': <span class="vj-header__value">' . $this->valueForHeaderPrint($this->var, $this->type) . '</span>';
+        $out .= ': <span class="vj-header__value">' . $this->_valueForHeaderPrint($this->var, $this->type) . '</span>';
         $out .= '</div>';
         return $out;
     }
 
-    private function makeFooter()
+    /**
+     * Make Visualijoper block footer html string
+     *
+     * @return string
+     */
+    private function _makeFooter(): string
     {
         $backtrace = debug_backtrace();
         $fromFile = $backtrace[2]['file'];
@@ -120,7 +166,14 @@ class visualijoper
         return '<div class="visualijoper__footer">Called from <strong>' . $fromFile . '</strong>, line <strong>' . $fromLine . '</strong><a target="_blank" href="https://github.com/desfpc/Visualijoper">powered by Visualijoper</a></div></div>';
     }
 
-    private function makeObjectBody(object $value, $level = 0)
+    /**
+     * Make Visualijoper block body html string for object variable
+     *
+     * @param object $value
+     * @param int $level
+     * @return string|void
+     */
+    private function _makeObjectBody($value, int $level = 0)
     {
         ++$level;
         if ($level == 6) {
@@ -129,12 +182,18 @@ class visualijoper
         if (!is_object($value)) {
             return;
         }
-        return $this->makeArrayBody(get_object_vars($value), $level);
+        return $this->_makeArrayBody(get_object_vars($value), $level);
     }
 
-    private function makeArrayBody(array $value, $level = 0)
+    /**
+     * Make Visualijoper block body html string for array variable
+     *
+     * @param array $value
+     * @param int $level
+     * @return string|void
+     */
+    private function _makeArrayBody(array $value, int $level = 0)
     {
-
         $out = '';
         ++$level;
 
@@ -147,15 +206,13 @@ class visualijoper
         }
 
         foreach ($value as $key => $item) {
-
-            //получаем тип значения
-            $tempType = $this->checkType($item);
+            $tempType = $this->_checkType($item);
             $moreClass = 'visualijoper__row_level' . $level . ' ';
-            //раскрываемая строка
+
             if ($this->types[$tempType]['body']) {
                 $moreClass .= 'visualijoper__row_clickable';
                 $typeSymbol = '&hellip;';
-                $body = $this->makeBody($tempType, $item, $level);
+                $body = $this->_makeBody($tempType, $item, $level);
             } else {
                 $typeSymbol = '=>';
                 $body = '';
@@ -166,18 +223,23 @@ class visualijoper
                     <span class="vj-row__key">' . $key . '</span>
                     <span class="vj-row__type">' . $tempType . '</span>
                     ' . $typeSymbol . '
-                    <span class="vj-row__value">' . $this->valueForHeaderPrint($item, $tempType) . '</span>
+                    <span class="vj-row__value">' . $this->_valueForHeaderPrint($item, $tempType) . '</span>
                 </p>' . $body;
-
 
             $out .= '</div>';
         }
-
         return $out;
-
     }
 
-    private function makeBody($type, $value, $level = 0)
+    /**
+     * Make Visualijoper block body html string
+     *
+     * @param string $type
+     * @param mixed $value
+     * @param int $level
+     * @return string
+     */
+    private function _makeBody(string $type, $value, int $level = 0): string
     {
         $out = '<div class="vj-body">';
 
@@ -186,10 +248,10 @@ class visualijoper
                 $out .= '<div class="vj-body__content vj-body__content_string"><pre>' . htmlspecialchars($value, ENT_QUOTES) . '</pre></div>';
                 break;
             case 'Array':
-                $out .= '<div class="vj-body__content vj-body__content_array">' . $this->makeArrayBody($value, $level) . '</div>';
+                $out .= '<div class="vj-body__content vj-body__content_array">' . $this->_makeArrayBody($value, $level) . '</div>';
                 break;
             case 'Object':
-                $out .= '<div class="vj-body__content vj-body__content_object">' . $this->makeObjectBody($value, $level) . '</div>';
+                $out .= '<div class="vj-body__content vj-body__content_object">' . $this->_makeObjectBody($value, $level) . '</div>';
                 break;
         }
 
@@ -198,7 +260,14 @@ class visualijoper
         return $out;
     }
 
-    public function valueForHeaderPrint($value, $type)
+    /**
+     * Format value for show in Visualijoper block body
+     *
+     * @param mixed $value
+     * @param string $type
+     * @return mixed|string
+     */
+    private function _valueForHeaderPrint($value, string $type)
     {
         switch ($type) {
             case 'String':
@@ -222,7 +291,6 @@ class visualijoper
                 }
                 break;
             case 'Object':
-                //$objClass = get_class($value);
                 $value = get_class($value);
                 break;
             case 'Array':
@@ -240,11 +308,12 @@ class visualijoper
 
     /**
      * Alias for convenient use of a class as a function
-     * @param $var - some type variable
-     * @param string $name - name of visualijoper block
+     *
+     * @param mixed $var - some type variable
+     * @param bool|string $name - name of visualijoper block
      */
-    static public function visualijop($var, $name = ''){
-        $vj = new visualijoper($var, $name);
+    static public function visualijop($var, $name = false, $printScripts = true){
+        $vj = new visualijoper($var, $name, $printScripts);
         echo $vj->render();
     }
 

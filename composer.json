@@ -10,7 +10,8 @@
     }
   ],
   "require": {
-
+    "php": ">=7",
+    "ext-mbstring": "*"
   },
   "autoload": {
     "psr-4": {
